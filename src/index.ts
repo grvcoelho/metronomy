@@ -6,10 +6,10 @@ type Arc = {
 }
 
 function getStore() {
-  const numberOfArcs = 15
-  const maxCycles = Math.round(numberOfArcs * 1.25)
+  const numberOfArcs = 5
+  const maxCycles = Math.round(numberOfArcs * 1.5)
   const duration = 60 * 0.2
-  const startTime = Date.now()
+  const startTime = new Date().getTime()
   const arcs = new Array<Arc>(numberOfArcs).fill({} as Arc)
 
   const store = createStore({
@@ -29,11 +29,6 @@ function getStore() {
   const paper = document.querySelector('#paper') as HTMLCanvasElement
   const pen = paper.getContext('2d')
   const store = getStore()
-
-  paper.width = paper.clientWidth
-  paper.height = paper.clientHeight
-
-  store.subscribe(console.info)
 
   store.setState((draft) => {
     draft.arcs.forEach((arc, index) => {
@@ -56,7 +51,7 @@ function getStore() {
   }
 
   function calculateNextImpactTime(currentImpactTime, velocity) {
-    return currentImpactTime + (Math.PI * velocity) / 1000
+    return currentImpactTime + (Math.PI / velocity) * 1000
   }
 
   function draw() {
@@ -65,8 +60,11 @@ function getStore() {
     const state = store.getState()
     const { settings, arcs } = state
 
-    const currentTime = Date.now()
-    const ellapsedTime = currentTime - settings.startTime
+    const currentTime = new Date().getTime()
+    const ellapsedTime = (currentTime - settings.startTime) / 1000
+
+    paper.width = window.innerWidth
+    paper.height = window.innerHeight
 
     const start = {
       x: paper.width * 0.1,
@@ -83,15 +81,55 @@ function getStore() {
       y: paper.height * 0.9,
     }
 
-    const lineLength = end.x - start.x
-
     pen.lineCap = 'round'
     pen.strokeStyle = 'white'
-    pen.lineWidth = 4
+    pen.lineWidth = 3
 
     pen.beginPath()
     pen.moveTo(start.x, start.y)
     pen.lineTo(end.x, end.y)
     pen.stroke()
+
+    const lineLength = end.x - start.x
+    const initialArcRadius = lineLength * 0.05
+    const spacing = (lineLength / 2 - initialArcRadius) / arcs.length
+
+    arcs.forEach((arc, index) => {
+      const arcRadius = initialArcRadius + spacing * index
+      const minAngle = Math.PI
+      const maxAngle = Math.PI * 2
+
+      pen.beginPath()
+      pen.arc(center.x, center.y, arcRadius, minAngle, maxAngle)
+      pen.stroke()
+
+      const distance = minAngle + ellapsedTime * arc.velocity
+      const modDistance = distance % maxAngle
+      const adjustedDistance =
+        modDistance >= Math.PI ? modDistance : maxAngle - modDistance
+
+      const pointOnArc = {
+        x: center.x + arcRadius * Math.cos(adjustedDistance),
+        y: center.y + arcRadius * Math.sin(adjustedDistance),
+      }
+
+      pen.fillStyle = 'white'
+      pen.beginPath()
+      pen.arc(pointOnArc.x, pointOnArc.y, lineLength * 0.007, 0, 2 * Math.PI)
+      pen.fill()
+
+      if (currentTime >= arc.nextImpactTime) {
+        console.warn('impact', index)
+
+        store.setState((draft) => {
+          draft.arcs[index].nextImpactTime = calculateNextImpactTime(
+            currentTime,
+            arc.velocity
+          )
+        })
+      }
+    })
+
+    window.requestAnimationFrame(draw)
   }
 })()
