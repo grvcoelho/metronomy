@@ -1,12 +1,16 @@
 import { createStore } from '@guifromjs/store'
+import { Scale, Range } from 'tonal'
 import { Soundfont } from 'smplr'
 
 type Arc = {
+  note: string
   velocity: number
   nextImpactTime: number
 }
 
 type Settings = {
+  instrumentName: string
+  scale: string
   numberOfArcs: number
   maxCycles: number
   duration: number
@@ -26,15 +30,17 @@ function createInstrument(audioContext: AudioContext, instrumentName: string) {
 }
 
 function getStore() {
-  const numberOfArcs = 5
+  const numberOfArcs = 24
   const maxCycles = Math.round(numberOfArcs * 1.5)
-  const duration = 60 * 0.2
+  const duration = 60
   const startTime = new Date().getTime()
   const arcs = new Array<Arc>(numberOfArcs).fill({} as Arc)
 
   const store = createStore<State>({
     instrument: null,
     settings: {
+      instrumentName: 'acoustic_grand_piano',
+      scale: 'C4 major',
       numberOfArcs,
       maxCycles,
       duration,
@@ -52,7 +58,10 @@ function getStore() {
   const ac = new AudioContext()
   const store = getStore()
 
-  const instrument = createInstrument(ac, 'acoustic_grand_piano')
+  const instrument = createInstrument(
+    ac,
+    store.getState().settings.instrumentName
+  )
 
   instrument.load.then(() => {
     store.setState((draft) => {
@@ -61,7 +70,10 @@ function getStore() {
   })
 
   store.setState((draft) => {
+    const degrees = Scale.degrees(draft.settings.scale)
+
     draft.arcs.forEach((arc, index) => {
+      arc.note = degrees(index + 1)
       arc.velocity = calculateVelocityForArc(index)
       arc.nextImpactTime = calculateNextImpactTime(
         draft.settings.startTime,
@@ -151,7 +163,7 @@ function getStore() {
       if (currentTime >= arc.nextImpactTime) {
         if (instrument) {
           instrument.start({
-            note: 'C4',
+            note: arc.note,
             time: instrument.context.currentTime,
           })
         }

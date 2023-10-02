@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@guifromjs/store": "^0.2.0",
-    "smplr": "^0.11.1"
+    "smplr": "^0.11.1",
+    "tonal": "^5.0.0"
   }
 }
