@@ -4961,6 +4961,11 @@ simple-swizzle@^0.2.2:
   dependencies:
     is-arrayish "^0.3.1"
 
+smplr@^0.11.1:
+  version "0.11.1"
+  resolved "https://registry.yarnpkg.com/smplr/-/smplr-0.11.1.tgz#5ca1d0f4e61021ba4490a92d3b6ccf39f91723cd"
+  integrity sha512-LuhFzqlS8K8NS9XRPQfTPrUsClhytz2uEE0MZWftp4QO/wXteqv85t9nmJTK5Gt8tdzBwb9+lv8rUYysoRs88g==
+
 snapdragon-node@^2.0.1:
   version "2.1.1"
   resolved "https://registry.npmjs.org/snapdragon-node/-/snapdragon-node-2.1.1.tgz"

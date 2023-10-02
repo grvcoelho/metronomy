@@ -1,8 +1,28 @@
 import { createStore } from '@guifromjs/store'
+import { Soundfont } from 'smplr'
 
 type Arc = {
   velocity: number
   nextImpactTime: number
+}
+
+type Settings = {
+  numberOfArcs: number
+  maxCycles: number
+  duration: number
+  startTime: number
+}
+
+type State = {
+  instrument: Soundfont | null
+  settings: Settings
+  arcs: Arc[]
+}
+
+function createInstrument(audioContext: AudioContext, instrumentName: string) {
+  return new Soundfont(audioContext, {
+    instrument: instrumentName,
+  })
 }
 
 function getStore() {
@@ -12,7 +32,8 @@ function getStore() {
   const startTime = new Date().getTime()
   const arcs = new Array<Arc>(numberOfArcs).fill({} as Arc)
 
-  const store = createStore({
+  const store = createStore<State>({
+    instrument: null,
     settings: {
       numberOfArcs,
       maxCycles,
@@ -28,7 +49,16 @@ function getStore() {
 ;(async function main() {
   const paper = document.querySelector('#paper') as HTMLCanvasElement
   const pen = paper.getContext('2d')
+  const ac = new AudioContext()
   const store = getStore()
+
+  const instrument = createInstrument(ac, 'acoustic_grand_piano')
+
+  instrument.load.then(() => {
+    store.setState((draft) => {
+      draft.instrument = instrument
+    })
+  })
 
   store.setState((draft) => {
     draft.arcs.forEach((arc, index) => {
@@ -58,7 +88,7 @@ function getStore() {
     if (!pen || !paper) return
 
     const state = store.getState()
-    const { settings, arcs } = state
+    const { settings, arcs, instrument } = state
 
     const currentTime = new Date().getTime()
     const ellapsedTime = (currentTime - settings.startTime) / 1000
@@ -119,8 +149,12 @@ function getStore() {
       pen.fill()
 
       if (currentTime >= arc.nextImpactTime) {
-        console.warn('impact', index)
-
+        if (instrument) {
+          instrument.start({
+            note: 'C4',
+            time: instrument.context.currentTime,
+          })
+        }
         store.setState((draft) => {
           draft.arcs[index].nextImpactTime = calculateNextImpactTime(
             currentTime,

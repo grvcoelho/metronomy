@@ -16,6 +16,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@guifromjs/store": "^0.2.0"
+    "@guifromjs/store": "^0.2.0",
+    "smplr": "^0.11.1"
   }
 }
