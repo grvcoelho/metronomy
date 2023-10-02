@@ -3,6 +3,7 @@ import { Scale, Range } from 'tonal'
 import { Soundfont } from 'smplr'
 
 type Arc = {
+  hue: number
   note: string
   velocity: number
   nextImpactTime: number
@@ -73,6 +74,7 @@ function getStore() {
     const degrees = Scale.degrees(draft.settings.scale)
 
     draft.arcs.forEach((arc, index) => {
+      arc.hue = (index / draft.settings.numberOfArcs) * 360
       arc.note = degrees(index + 1)
       arc.velocity = calculateVelocityForArc(index)
       arc.nextImpactTime = calculateNextImpactTime(
@@ -124,7 +126,7 @@ function getStore() {
     }
 
     pen.lineCap = 'round'
-    pen.strokeStyle = 'white'
+    pen.strokeStyle = 'rgba(255, 255, 255, 1)'
     pen.lineWidth = 3
 
     pen.beginPath()
@@ -141,6 +143,13 @@ function getStore() {
       const minAngle = Math.PI
       const maxAngle = Math.PI * 2
 
+      pen.strokeStyle = 'rgba(255, 255, 255, 0.5)'
+
+      if (currentTime >= arc.nextImpactTime) {
+        pen.strokeStyle = `hsl(${arc.hue}, 80%, 50%)`
+      }
+
+      pen.lineWidth = 3
       pen.beginPath()
       pen.arc(center.x, center.y, arcRadius, minAngle, maxAngle)
       pen.stroke()
@@ -155,7 +164,7 @@ function getStore() {
         y: center.y + arcRadius * Math.sin(adjustedDistance),
       }
 
-      pen.fillStyle = 'white'
+      pen.fillStyle = `hsl(${arc.hue}, 80%, 50%)`
       pen.beginPath()
       pen.arc(pointOnArc.x, pointOnArc.y, lineLength * 0.007, 0, 2 * Math.PI)
       pen.fill()
