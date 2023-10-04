@@ -6,6 +6,7 @@ type Arc = {
   hue: number
   note: string
   velocity: number
+  lastImpactTime: number
   nextImpactTime: number
 }
 
@@ -16,6 +17,7 @@ type Settings = {
   maxCycles: number
   duration: number
   startTime: number
+  noteDuration: number
 }
 
 type State = {
@@ -31,21 +33,22 @@ function createInstrument(audioContext: AudioContext, instrumentName: string) {
 }
 
 function getStore() {
-  const numberOfArcs = 24
+  const numberOfArcs = 21
   const maxCycles = Math.round(numberOfArcs * 1.5)
-  const duration = 60
+  const duration = 30
   const startTime = new Date().getTime()
   const arcs = new Array<Arc>(numberOfArcs).fill({} as Arc)
 
   const store = createStore<State>({
     instrument: null,
     settings: {
-      instrumentName: 'acoustic_grand_piano',
+      instrumentName: 'marimba',
       scale: 'C4 major',
       numberOfArcs,
       maxCycles,
       duration,
       startTime,
+      noteDuration: 1000,
     },
     arcs,
   })
@@ -77,6 +80,7 @@ function getStore() {
       arc.hue = (index / draft.settings.numberOfArcs) * 360
       arc.note = degrees(index + 1)
       arc.velocity = calculateVelocityForArc(index)
+      arc.lastImpactTime = 0
       arc.nextImpactTime = calculateNextImpactTime(
         draft.settings.startTime,
         arc.velocity
@@ -85,6 +89,28 @@ function getStore() {
   })
 
   draw()
+
+  function calculateDynamicArcColor(
+    arc: Arc,
+    currentTime: number,
+    duration: number
+  ) {
+    const minOpacity = 0.5
+    const maxOpacity = 1
+    const baseColor = 'rgba(255, 255, 255, 0.5)'
+
+    if (currentTime >= arc.lastImpactTime + duration) {
+      return baseColor
+    }
+
+    const timeSinceLastImpact = currentTime - arc.lastImpactTime
+    const percentage = Math.min(1, timeSinceLastImpact / duration)
+    const opacityDelta = maxOpacity - minOpacity
+
+    return `hsla(${arc.hue}, 80%, 50%, ${
+      maxOpacity - opacityDelta * percentage
+    })`
+  }
 
   function calculateVelocityForArc(index) {
     const { settings } = store.getState()
@@ -143,11 +169,7 @@ function getStore() {
       const minAngle = Math.PI
       const maxAngle = Math.PI * 2
 
-      pen.strokeStyle = 'rgba(255, 255, 255, 0.5)'
-
-      if (currentTime >= arc.nextImpactTime) {
-        pen.strokeStyle = `hsl(${arc.hue}, 80%, 50%)`
-      }
+      pen.strokeStyle = calculateDynamicArcColor(arc, currentTime, 1000) // FIXME
 
       pen.lineWidth = 3
       pen.beginPath()
@@ -174,9 +196,12 @@ function getStore() {
           instrument.start({
             note: arc.note,
             time: instrument.context.currentTime,
+            duration: settings.noteDuration / 1000,
+            decayTime: settings.noteDuration / 1000,
           })
         }
         store.setState((draft) => {
+          draft.arcs[index].lastImpactTime = draft.arcs[index].nextImpactTime
           draft.arcs[index].nextImpactTime = calculateNextImpactTime(
             currentTime,
             arc.velocity
